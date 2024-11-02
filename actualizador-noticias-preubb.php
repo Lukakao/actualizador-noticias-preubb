@@ -22,11 +22,10 @@
 add_filter('cron_schedules', 'custom_cron_schedule');
 
 function custom_cron_schedule($schedules) {
-    $schedules['five_seconds'] = array(
-        'interval' => 5,
-        'display' => __('Every 5 Seconds'),
-    );
-    return $schedules;
+    $schedules['one_minute'] = array(
+    'interval' => 60,
+    'display' => __('Every 1 Minute'),
+);
 }
 
 add_action('wp', 'programar_siguiente_checkeo');
