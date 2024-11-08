@@ -17,6 +17,95 @@
 
 require_once( '/home/lukas/Local Sites/pusi/app/public/wp-load.php' );
 
+
+add_action('admin_menu', 'actualizador_noticias_menu');
+
+// Function to create the admin menu and page
+function actualizador_noticias_menu() {
+    add_menu_page(
+        'Actualizador Noticias Settings',   // Page title
+        'Actualizador Noticias',            // Menu title
+        'manage_options',                   // Capability required
+        'actualizador-noticias',            // Menu slug
+        'actualizador_noticias_settings_page', // Function to display the settings page
+        'dashicons-admin-generic',          // Icon (optional)
+        20                                  // Position (optional)
+    );
+}
+
+
+// Function to display content on the settings page (optional)
+function actualizador_noticias_settings_page() {
+    ?>
+    <div class="wrap">
+        <h1>Configuracion</h1>
+        <?php
+            settings_fields('actualizador_noticias_settings_group'); 
+            do_settings_sections('actualizador-noticias'); 
+            
+            submit_button();
+        ?>
+    </div>
+    <?php
+}
+
+
+add_action('admin_init', 'actualizador_noticias_settings_init');
+
+function actualizador_noticias_settings_init() {
+    register_setting(
+        'actualizador_noticias_settings_group',  // Option group
+        'access_token_field'      // Option name (this is what stores the field value)
+    );
+
+    add_settings_section(
+        'access_token_section',         // Section ID
+        'Cambiar access token',          // Title
+        null,                        // Callback for description (optional)
+        'actualizador-noticias'         // Page where the section appears
+    );
+    
+    add_settings_field(
+        'access_token_field',      // Field ID
+        'Access Token',                // Field Title
+        'access_token_field_cb',   // Callback function to display the field
+        'actualizador-noticias',        // Page where the field appears
+        'access_token_section'          // Section where the field appears
+    );
+}
+
+function access_token_field_cb(){
+    $value = get_option('access_token_field', '');
+    ?>
+    <input type="text" name="access_token_field" value="<?php echo esc_attr($value); ?>" />
+    <form method="post" action="admin-post.php">
+    <?php wp_nonce_field('actualizador_noticias_custom_action', 'actualizador_noticias_nonce'); ?>
+        <input type="hidden" name="action" value="probar_access_token" />
+        <input type="submit" name="custom_action_button" class="button button-primary" value="Probar access token" />
+    </form>
+    <?php
+}
+
+add_action('admin_post_probar_access_token', 'probar_access_token');
+
+function probar_access_token(){
+    if ( !isset($_POST['actualizador_noticias_nonce']) || !wp_verify_nonce($_POST['actualizador_noticias_nonce'], 'actualizador_noticias_custom_action') ) {
+        wp_die('Nonce verification failed!');
+    }
+    echo 'The access token was successfully tested.';
+    error_log('boton funcona');
+    wp_redirect(admin_url('admin.php?page=actualizador-noticias'));
+    exit;
+}
+
+add_filter('plugin_action_links_' . plugin_basename(__FILE__), 'actualizador_noticias_links');
+
+function actualizador_noticias_links($links) {
+    $settings_link = '<a href="' . esc_url(get_admin_url() . 'admin.php?page=actualizador-noticias') . '">Settings</a>';
+    array_unshift($links, $settings_link);
+    return $links;
+}
+
 function actualizar_noticias(){    
     $access_token = "EAANLwGqwXh4BO6fT9NEstjcuTZBc6GXPmHvRkgvJjwz3VeTHMFJOvmPOEr80qpULhgLuA0PWKRiBdCZApzkpUMb7k59OsZBrgNICSAEGDkBGZCQc6wXElA2pVT9AR2Nczv0v11C3CIDKzrKMqhtYoQru7Lu4xCZBX2NkYcWPCY5ZABJeiapvgxpE04XyZAQZAZBIhWXfzU43sXvGJqoltkXYWxo0ZD";
     $base_url = "https://graph.facebook.com/v21.0/281060260937/albums";
@@ -32,7 +121,9 @@ function actualizar_noticias(){
     $response = curl_exec($ch);
     if ($response === false) {
         echo "cURL Error: " . curl_error($ch);
+        return;
     } else {
+        return;
         $fb_posts = json_decode($response, true)['data']; #facebbok publicaiones
         usort($fb_posts, function ($a, $b) {
             return strtotime($a['created_time']) - strtotime($b['created_time']);
